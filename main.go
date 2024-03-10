@@ -38,8 +38,9 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "创建新的文章")
 }
 
-func forceHTMLMiddleware(next http.Handler) http.Handle{
-	return http.HandleFunc(func (w http.ResponseWriter,r *http.Request){
+func forceHTMLMiddleware(next http.Handler) http.Handler{
+	//return http.HandleFunc(func (w http.ResponseWriter,r *http.Request){
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type","text/html;charset=utf-8")
 		next.ServeHTTP(w,r)
 	})
