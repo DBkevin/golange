@@ -1,14 +1,18 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 )
 
@@ -19,6 +23,67 @@ type ArticlesFormDat struct {
 }
 
 var router = mux.NewRouter()
+var db *sql.DB
+
+func initDB() {
+	var err error
+	config := mysql.Config{
+		User:                    "goblog",
+		Passwd:                  "asdasd123123",
+		Addr:                    "120.25.70.117:3306",
+		Net:                     "tcp",
+		DBName:                  "goblog",
+		AllowCleartextPasswords: true,
+		AllowNativePasswords:    true,
+	}
+	db, err = sql.Open("mysql", config.FormatDSN())
+	checkError(err)
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxIdleTime(5 * time.Minute)
+
+	err = db.Ping()
+	checkError(err)
+}
+func createTables() {
+	createArticlesSQL := `CREATE TABLE IF NOT EXISTS articles(
+		id bigint(20) PRIMARY KEY AUTO_INCREMENT NOT NULL,
+    title varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+    body longtext COLLATE utf8mb4_unicode_ci
+	);`
+	_, err := db.Exec(createArticlesSQL)
+	checkError(err)
+
+}
+func saveArticleToDB(title string, body string) (int64, error) {
+
+	var (
+		id   int64
+		err  error
+		rs   sql.Result
+		stmt *sql.Stmt
+	)
+	stmt, err = db.Prepare("INSERT INTO articles(title,body)VALUES(?,?)")
+
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+	rs, err = stmt.Exec(title, body)
+	if err != nil {
+		return 0, err
+	}
+	if id, err = rs.LastInsertId(); id > 0 {
+		return id, nil
+	}
+	return 0, err
+
+}
+func checkError(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -74,11 +139,14 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// 检查是否有错误
 	if len(errors) == 0 {
-		fmt.Fprint(w, "验证通过!<br>")
-		fmt.Fprintf(w, "title 的值为: %v <br>", title)
-		fmt.Fprintf(w, "title 的长度为: %v <br>", utf8.RuneCountInString(title))
-		fmt.Fprintf(w, "body 的值为: %v <br>", body)
-		fmt.Fprintf(w, "body 的长度为: %v <br>", utf8.RuneCountInString(body))
+		lastInserID, err := saveArticleToDB(title, body)
+		if lastInserID > 0 {
+			fmt.Fprint(w, "插入成功，ID为"+strconv.FormatInt(lastInserID, 10))
+		} else {
+			checkError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 服务器内部错误")
+		}
 	} else {
 
 		storeUrl, _ := router.Get("articles.store").URL()
@@ -130,7 +198,8 @@ func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-
+	initDB()
+	createTables()
 	router.HandleFunc("/", homeHandler).Methods("GET").Name("home")
 	router.HandleFunc("/about", aboutHandler).Methods("GET").Name("about")
 
