@@ -16,7 +16,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type ArticlesFormDat struct {
+type ArticlesFormData struct {
 	Title, Body string
 	URL         *url.URL
 	Errors      map[string]string
@@ -108,12 +108,9 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 
 func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
 
-	vars := mux.Vars(r)
-	id := vars["id"]
+	id := getRouteVariable("id", r)
 
-	article := Article{}
-	query := "SELECT *FROM  articles where id =?"
-	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+	article, err := getArticleByID(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNotFound)
@@ -163,7 +160,7 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 
 		storeUrl, _ := router.Get("articles.store").URL()
-		data := ArticlesFormDat{
+		data := ArticlesFormData{
 			Title: title,
 			Body:  body,
 
@@ -198,7 +195,7 @@ func removeTrailingSlash(next http.Handler) http.Handler {
 func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	storeURL, _ := router.Get("articles.store").URL()
-	data := ArticlesFormDat{Title: "", Body: "", URL: storeURL, Errors: nil}
+	data := ArticlesFormData{Title: "", Body: "", URL: storeURL, Errors: nil}
 	tmpl, err := template.ParseFiles("resources/views/articles/create.gohtml")
 	if err != nil {
 		panic(err)
@@ -210,6 +207,120 @@ func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func articlesEditHandler(w http.ResponseWriter, r *http.Request) {
+
+	//
+	id := getRouteVariable("id", r)
+	article, err := getArticleByID(id)
+	// 3. 如果出现错误
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// 3.1 数据未找到
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "404 文章未找到")
+		} else {
+			// 3.2 数据库错误
+			checkError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 服务器内部错误")
+		}
+	} else {
+		// 4. 读取成功，显示表单
+		updateURL, _ := router.Get("articles.update").URL("id", id)
+		data := ArticlesFormData{
+			Title:  article.Title,
+			Body:   article.Body,
+			URL:    updateURL,
+			Errors: nil,
+		}
+		tmpl, err := template.ParseFiles("./resources/views/articles/edit.gohtml")
+		checkError(err)
+
+		err = tmpl.Execute(w, data)
+		checkError(err)
+	}
+
+}
+
+func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	id := getRouteVariable("id", r)
+	_, err := getArticleByID(id)
+
+	if err != nil {
+
+		if err == sql.ErrNoRows {
+			fmt.Printf("这里0")
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "404文章未找到")
+		} else {
+			checkError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500服务器内部错误")
+		}
+	} else {
+
+		title := r.PostFormValue("title")
+		body := r.PostFormValue("body")
+		errors := make(map[string]string)
+
+		if title == "" {
+			errors["title"] = "标题不能为空"
+		} else if utf8.RuneCountInString(title) < 3 || utf8.RuneCountInString(title) > 40 {
+			errors["title"] = "标题长度需介与3-40"
+		}
+		if body == "" {
+			errors["body"] = "内容不能为空"
+		} else if utf8.RuneCountInString(body) < 10 {
+			errors["body"] = "内容长度需要大于或等于10个字节"
+		}
+
+		if len(errors) == 0 {
+
+			query := "update articles set title=?,body=? where id =?"
+			rs, err := db.Exec(query, title, body, id)
+
+			if err != nil {
+				checkError(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, "500 服务器内部错误")
+			}
+
+			if n, _ := rs.RowsAffected(); n > 0 {
+				showURL, _ := router.Get("articles.show").URL("id", id)
+				http.Redirect(w, r, showURL.String(), http.StatusFound)
+			} else {
+				fmt.Fprint(w, "你没有任何任何更改！")
+			}
+		} else {
+			fmt.Printf("这里1")
+			updateURL, _ := router.Get("articles.update").URL("id", id)
+			data := ArticlesFormData{
+				Title:  title,
+				Body:   body,
+				URL:    updateURL,
+				Errors: errors,
+			}
+			fmt.Printf("这里2")
+			tmpl, err := template.ParseFiles("./resources/views/articles/edit.gohtml")
+			checkError(err)
+			err = tmpl.Execute(w, data)
+			checkError(err)
+		}
+
+	}
+
+}
+
+func getRouteVariable(parameterName string, r *http.Request) string {
+	vars := mux.Vars(r)
+	return vars[parameterName]
+}
+func getArticleByID(id string) (Article, error) {
+	article := Article{}
+	query := "SELECT * FROM articles where id=?"
+	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+	return article, err
+}
 func main() {
 	initDB()
 	createTables()
@@ -217,6 +328,8 @@ func main() {
 	router.HandleFunc("/about", aboutHandler).Methods("GET").Name("about")
 
 	router.HandleFunc("/articles/{id:[0-9]+}", articlesShowHandler).Methods("GET").Name("articles.show")
+	router.HandleFunc("/articles/{id:[0-9]+}/edit", articlesEditHandler).Methods("GET").Name("articles.edit")
+	router.HandleFunc("/articles/{id:[0-9]+}", articlesUpdateHandler).Methods("POST").Name("articles.update")
 	router.HandleFunc("/articles", articlesIndexHandler).Methods("GET").Name("articles.index")
 	router.HandleFunc("/articles", articlesStoreHandler).Methods("POST").Name("articles.store")
 	router.HandleFunc("/articles/create", articlesCreateHandler).Methods("GET").Name("articles.create")
