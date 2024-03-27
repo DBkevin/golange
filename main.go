@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"goblog/pkg/route"
 	"html/template"
 	"log"
 	"net/http"
@@ -15,6 +16,9 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 )
+
+var router *mux.Router
+var db *sql.DB
 
 func RouterName2URL(routerName string, pairs ...string) string {
 	url, err := router.Get(routerName).URL(pairs...)
@@ -37,9 +41,6 @@ type Article struct {
 	Title, Body string
 	ID          int64
 }
-
-var router = mux.NewRouter()
-var db *sql.DB
 
 func (a Article) Delete() (RowsAffected int64, err error) {
 	rs, err := db.Exec("DELETE FROM articles where id =" + strconv.FormatInt(a.ID, 10))
@@ -156,7 +157,7 @@ func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
 		//tmpl, err := template.ParseFiles("./resources/views/articles/show.gohtml")
 		tmpl, err := template.New("show.gohtml").
 			Funcs(template.FuncMap{
-				"RouteName2URL": RouterName2URL,
+				"RouteName2URL": route.Name2URL,
 				"Int64ToString": Int64ToString,
 			}).
 			ParseFiles("resources/views/articles/show.gohtml")
@@ -411,6 +412,8 @@ func getArticleByID(id string) (Article, error) {
 func main() {
 	initDB()
 	createTables()
+	route.Initizalize()
+	router = route.Router
 	router.HandleFunc("/", homeHandler).Methods("GET").Name("home")
 	router.HandleFunc("/about", aboutHandler).Methods("GET").Name("about")
 
