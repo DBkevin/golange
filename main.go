@@ -141,7 +141,7 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 
 func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
 
-	id := getRouteVariable("id", r)
+	id := route.GetRouteVariable("id", r)
 
 	article, err := getArticleByID(id)
 	if err != nil {
@@ -267,7 +267,7 @@ func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
 func articlesEditHandler(w http.ResponseWriter, r *http.Request) {
 
 	//
-	id := getRouteVariable("id", r)
+	id := route.GetRouteVariable("id", r)
 	article, err := getArticleByID(id)
 	// 3. 如果出现错误
 	if err != nil {
@@ -300,7 +300,7 @@ func articlesEditHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	id := getRouteVariable("id", r)
+	id := route.GetRouteVariable("id", r)
 	_, err := getArticleByID(id)
 
 	if err != nil {
@@ -369,7 +369,7 @@ func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func articlesDeleteHandler(w http.ResponseWriter, r *http.Request) {
-	id := getRouteVariable("id", r)
+	id := route.GetRouteVariable("id", r)
 	article, err := getArticleByID(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -399,10 +399,6 @@ func articlesDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getRouteVariable(parameterName string, r *http.Request) string {
-	vars := mux.Vars(r)
-	return vars[parameterName]
-}
 func getArticleByID(id string) (Article, error) {
 	article := Article{}
 	query := "SELECT * FROM articles where id=?"
