@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"goblog/pkg/logger"
 	"goblog/pkg/route"
-	"goblog/types"
+	"goblog/pkg/types"
 	"html/template"
 	"net/http"
 	"net/url"
