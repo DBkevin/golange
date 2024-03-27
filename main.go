@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"goblog/pkg/database"
 	"goblog/pkg/logger"
 	"goblog/pkg/route"
 	"goblog/pkg/types"
@@ -11,15 +12,12 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 	"unicode/utf8"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 )
 
 var router *mux.Router
-var db *sql.DB
 
 func RouterName2URL(routerName string, pairs ...string) string {
 	url, err := router.Get(routerName).URL(pairs...)
@@ -44,7 +42,7 @@ type Article struct {
 }
 
 func (a Article) Delete() (RowsAffected int64, err error) {
-	rs, err := db.Exec("DELETE FROM articles where id =" + strconv.FormatInt(a.ID, 10))
+	rs, err := database.DB.Exec("DELETE FROM articles where id =" + strconv.FormatInt(a.ID, 10))
 
 	if err != nil {
 		return 0, err
@@ -63,37 +61,8 @@ func (a Article) Link() string {
 	}
 	return showURL.String()
 }
-func initDB() {
-	var err error
-	config := mysql.Config{
-		User:                    "goblog",
-		Passwd:                  "asdasd123123",
-		Addr:                    "120.25.70.117:3306",
-		Net:                     "tcp",
-		DBName:                  "goblog",
-		AllowCleartextPasswords: true,
-		AllowNativePasswords:    true,
-	}
-	db, err = sql.Open("mysql", config.FormatDSN())
-	logger.LogError(err)
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(25)
-	db.SetConnMaxIdleTime(5 * time.Minute)
 
-	err = db.Ping()
-	logger.LogError(err)
-}
-func createTables() {
-	createArticlesSQL := `CREATE TABLE IF NOT EXISTS articles(
-		id bigint(20) PRIMARY KEY AUTO_INCREMENT NOT NULL,
-    title varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-    body longtext COLLATE utf8mb4_unicode_ci
-	);`
-	_, err := db.Exec(createArticlesSQL)
-	logger.LogError(err)
-
-}
-func saveArticleToDB(title string, body string) (int64, error) {
+func saveArticleTodatabaseDB(title string, body string) (int64, error) {
 
 	var (
 		id   int64
@@ -101,7 +70,7 @@ func saveArticleToDB(title string, body string) (int64, error) {
 		rs   sql.Result
 		stmt *sql.Stmt
 	)
-	stmt, err = db.Prepare("INSERT INTO articles(title,body)VALUES(?,?)")
+	stmt, err = database.DB.Prepare("INSERT INTO articles(title,body)VALUES(?,?)")
 
 	if err != nil {
 		return 0, err
@@ -165,7 +134,7 @@ func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.Query("SELECT  * FROM articles")
+	rows, err := database.DB.Query("SELECT  * FROM articles")
 	logger.LogError(err)
 	defer rows.Close()
 	var articles []Article
@@ -202,7 +171,7 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// 检查是否有错误
 	if len(errors) == 0 {
-		lastInserID, err := saveArticleToDB(title, body)
+		lastInserID, err := saveArticleTodatabaseDB(title, body)
 		if lastInserID > 0 {
 			fmt.Fprint(w, "插入成功，ID为"+strconv.FormatInt(lastInserID, 10))
 		} else {
@@ -330,7 +299,7 @@ func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		if len(errors) == 0 {
 
 			query := "update articles set title=?,body=? where id =?"
-			rs, err := db.Exec(query, title, body, id)
+			rs, err := database.DB.Exec(query, title, body, id)
 
 			if err != nil {
 				logger.LogError(err)
@@ -398,12 +367,12 @@ func articlesDeleteHandler(w http.ResponseWriter, r *http.Request) {
 func getArticleByID(id string) (Article, error) {
 	article := Article{}
 	query := "SELECT * FROM articles where id=?"
-	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+	err := database.DB.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
 	return article, err
 }
 func main() {
-	initDB()
-	createTables()
+	database.InitDB()
+	database.CreateTables()
 	route.Initizalize()
 	router = route.Router
 	router.HandleFunc("/", homeHandler).Methods("GET").Name("home")
