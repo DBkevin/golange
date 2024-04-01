@@ -3,10 +3,10 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"goblog/bootstrap"
 	"goblog/pkg/database"
 	"goblog/pkg/logger"
-	"goblog/pkg/route"
-	"goblog/pkg/types"
+
 	"html/template"
 	"net/http"
 	"net/url"
@@ -18,6 +18,11 @@ import (
 )
 
 var router *mux.Router
+
+func getRouteVariable(parameterName string, r *http.Request) string {
+	vars := mux.Vars(r)
+	return vars[parameterName]
+}
 
 func RouterName2URL(routerName string, pairs ...string) string {
 	url, err := router.Get(routerName).URL(pairs...)
@@ -102,35 +107,6 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNotFound)
 	fmt.Fprint(w, "<h1>请求页面未找到 :(</h1><p>如有疑惑，请联系我们。</p>")
-}
-
-func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
-
-	id := route.GetRouteVariable("id", r)
-
-	article, err := getArticleByID(id)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w, "404文章未找到")
-		} else {
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "500服务器内部错误")
-		}
-	} else {
-		//tmpl, err := template.ParseFiles("./resources/views/articles/show.gohtml")
-		tmpl, err := template.New("show.gohtml").
-			Funcs(template.FuncMap{
-				"RouteName2URL": route.Name2URL,
-				"Int64ToString": types.Int64ToString,
-			}).
-			ParseFiles("resources/views/articles/show.gohtml")
-
-		logger.LogError(err)
-		err = tmpl.Execute(w, article)
-		logger.LogError(err)
-	}
 }
 
 func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -232,7 +208,7 @@ func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
 func articlesEditHandler(w http.ResponseWriter, r *http.Request) {
 
 	//
-	id := route.GetRouteVariable("id", r)
+	id := getRouteVariable("id", r)
 	article, err := getArticleByID(id)
 	// 3. 如果出现错误
 	if err != nil {
@@ -265,7 +241,7 @@ func articlesEditHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	id := route.GetRouteVariable("id", r)
+	id := getRouteVariable("id", r)
 	_, err := getArticleByID(id)
 
 	if err != nil {
@@ -334,7 +310,7 @@ func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func articlesDeleteHandler(w http.ResponseWriter, r *http.Request) {
-	id := route.GetRouteVariable("id", r)
+	id := getRouteVariable("id", r)
 	article, err := getArticleByID(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -373,10 +349,9 @@ func getArticleByID(id string) (Article, error) {
 func main() {
 	database.InitDB()
 	database.CreateTables()
-	route.Initizalize()
-	router = route.Router
 
-	router.HandleFunc("/articles/{id:[0-9]+}", articlesShowHandler).Methods("GET").Name("articles.show")
+	bootstrap.SetupDB()
+	router = bootstrap.SetupRoute()
 	router.HandleFunc("/articles/{id:[0-9]+}/edit", articlesEditHandler).Methods("GET").Name("articles.edit")
 	router.HandleFunc("/articles/{id:[0-9]+}", articlesUpdateHandler).Methods("POST").Name("articles.update")
 	router.HandleFunc("/articles", articlesIndexHandler).Methods("GET").Name("articles.index")
