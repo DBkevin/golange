@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"goblog/app/models/user"
 	"goblog/app/requests"
+	"goblog/pkg/session"
 	"goblog/pkg/view"
 	"net/http"
 )
@@ -11,6 +12,18 @@ import (
 type AuthController struct {
 }
 
+func (*AuthController) Login(w http.ResponseWriter, r *http.Request) {
+
+	view.RenderSimple(w, view.D{
+		"Email":    " ",
+		"Password": "",
+	}, "auth.login")
+	session.Forget("uid")
+
+}
+func (*AuthController) DoLogin(w http.ResponseWriter, r *http.Request) {
+
+}
 func (*AuthController) Register(w http.ResponseWriter, r *http.Request) {
 	view.RenderSimple(w, view.D{
 		"User": user.User{},
