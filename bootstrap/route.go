@@ -2,12 +2,15 @@
 package bootstrap
 
 import (
+	"goblog/app/models/article"
+	"goblog/app/models/user"
 	"goblog/pkg/model"
 	"goblog/pkg/route"
 	"goblog/routes"
 	"time"
 
 	"github.com/gorilla/mux"
+	"gorm.io/gorm"
 )
 
 func SetupDB() {
@@ -19,10 +22,20 @@ func SetupDB() {
 	sqlDB.SetMaxIdleConns(25)
 	// 设置每个链接的过期时间
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+	migration(db)
 }
 func SetupRoute() *mux.Router {
 	router := mux.NewRouter()
 	routes.RegisterWebRoutes(router)
 	route.SetRoute(router)
+
 	return router
+}
+
+func migration(db *gorm.DB) {
+
+	db.AutoMigrate(
+		&user.User{},
+		&article.Article{},
+	)
 }
