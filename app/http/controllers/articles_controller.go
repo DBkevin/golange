@@ -32,7 +32,7 @@ func (*ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500服务器内部错误")
 		}
 	} else {
-		view.Render(w, article, "articles.show")
+		view.Render(w, view.D{"Article": article}, "articles.show")
 	}
 
 }
@@ -45,7 +45,7 @@ func (*ArticlesController) Index(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "500服务器错误")
 	} else {
-		view.Render(w, articles, "articles.index")
+		view.Render(w, view.D{"Articles": articles}, "articles.index")
 	}
 
 }
@@ -100,7 +100,7 @@ func (*ArticlesController) Store(w http.ResponseWriter, r *http.Request) {
 }
 func (*ArticlesController) Create(w http.ResponseWriter, r *http.Request) {
 
-	view.Render(w, view.D{}, "articles.create", "articles._form_field")
+	view.Render(w, view.D{"Title": "", "Body": ""}, "articles.create", "articles._form_field")
 
 }
 func (*ArticlesController) Edit(w http.ResponseWriter, r *http.Request) {
