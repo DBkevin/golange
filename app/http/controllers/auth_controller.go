@@ -13,6 +13,10 @@ import (
 type AuthController struct {
 }
 
+func (*AuthController) Logout(w http.ResponseWriter, r *http.Request) {
+	auth.Logout()
+	http.Redirect(w, r, "/", http.StatusFound)
+}
 func (*AuthController) Login(w http.ResponseWriter, r *http.Request) {
 
 	view.RenderSimple(w, view.D{
