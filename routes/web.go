@@ -10,6 +10,7 @@ import (
 func RegisterWebRoutes(r *mux.Router) {
 	pc := new(controllers.PagesController)
 	ac := new(controllers.ArticlesController)
+	auc := new(controllers.AuthController)
 	r.NotFoundHandler = http.HandlerFunc(pc.NotFound)
 	r.HandleFunc("/", pc.Home).Methods("GET").Name("home")
 	r.HandleFunc("/about", pc.About).Methods("GET").Name("about")
@@ -20,7 +21,8 @@ func RegisterWebRoutes(r *mux.Router) {
 	r.HandleFunc("/articles", ac.Store).Methods("POST").Name("articles.store")
 	r.HandleFunc("/articles/{id:[0-9]+}/edit", ac.Edit).Methods("GET").Name("articles.edit")
 	r.HandleFunc("/articles/{id:[0-9]+}/delete", ac.Delete).Methods("POST").Name("articles.delete")
-
+	r.HandleFunc("/auth/register", auc.Register).Methods("GET").Name("auth.register")
+	r.HandleFunc("/auth/do-register", auc.DoRegister).Methods("POST").Subrouter().Name("auth.doregister")
 	//静态资源
 	r.PathPrefix("/css/").Handler(http.FileServer(http.Dir("./public")))
 	r.PathPrefix("/js/").Handler(http.FileServer(http.Dir("./public")))

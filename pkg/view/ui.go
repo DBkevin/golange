@@ -9,8 +9,17 @@ import (
 	"text/template"
 )
 
-// 渲染视图
+type D map[string]interface{}
+
 func Render(w io.Writer, data interface{}, tplFiles ...string) {
+	RenderTemplate(w, "myapp", data, tplFiles...)
+}
+func RenderSimple(w io.Writer, data interface{}, tplFiles ...string) {
+	RenderTemplate(w, "simple", data, tplFiles...)
+}
+
+// 渲染通用视图
+func RenderTemplate(w io.Writer, name string, data interface{}, tplFiles ...string) {
 
 	// 1 设置模板相对路径
 	viewDir := "resources/views/"
@@ -30,7 +39,7 @@ func Render(w io.Writer, data interface{}, tplFiles ...string) {
 		}).ParseFiles(allFiles...)
 	logger.LogError(err)
 	// 6 渲染模板
-	err = tmpl.ExecuteTemplate(w, "myapp", data)
+	err = tmpl.ExecuteTemplate(w, name, data)
 	logger.LogError(err)
 
 }
