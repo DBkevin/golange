@@ -49,6 +49,8 @@ func (*AuthController) Register(w http.ResponseWriter, r *http.Request) {
 		"User": user.User{},
 	}, "auth.register")
 }
+
+// DoRegister 处理注册逻辑
 func (*AuthController) DoRegister(w http.ResponseWriter, r *http.Request) {
 	//初始化数据
 	_user := user.User{
@@ -68,6 +70,7 @@ func (*AuthController) DoRegister(w http.ResponseWriter, r *http.Request) {
 	} else {
 		_user.Create()
 		if _user.ID > 0 {
+			auth.Login(_user)
 			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
