@@ -4,6 +4,7 @@ package bootstrap
 import (
 	"goblog/app/models/article"
 	"goblog/app/models/user"
+	"goblog/pkg/config"
 	"goblog/pkg/model"
 	"goblog/pkg/route"
 	"goblog/routes"
@@ -14,14 +15,15 @@ import (
 )
 
 func SetupDB() {
+
 	db := model.ContentDB()
 	sqlDB, _ := db.DB()
 	// 设置最大连接数
-	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetMaxOpenConns(config.GetInt("database.mysql.max_open_connections"))
 	// 设置最大空闲连接数
-	sqlDB.SetMaxIdleConns(25)
+	sqlDB.SetMaxIdleConns(config.GetInt("database.mysql.max_idle_connections"))
 	// 设置每个链接的过期时间
-	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+	sqlDB.SetConnMaxLifetime(time.Duration(config.GetInt("database.mysql.max_life_seconds")) * time.Second)
 	migration(db)
 }
 func SetupRoute() *mux.Router {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"goblog/app/models/article"
 	"goblog/app/requests"
+	"goblog/pkg/flash"
 	"goblog/pkg/logger"
 	"goblog/pkg/route"
 	"goblog/pkg/view"
@@ -37,6 +38,7 @@ func (*ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
 }
 
 func (*ArticlesController) Index(w http.ResponseWriter, r *http.Request) {
+
 	articles, err := article.GetAll()
 
 	if err != nil {
@@ -62,6 +64,7 @@ func (*ArticlesController) Store(w http.ResponseWriter, r *http.Request) {
 	if len(errors) == 0 {
 
 		_article.Create()
+		flash.Success("发布成功")
 		if _article.ID > 0 {
 			indexURL := route.Name2URL("articles.show", "id", _article.GetStringID())
 			http.Redirect(w, r, indexURL, http.StatusFound)
@@ -71,6 +74,7 @@ func (*ArticlesController) Store(w http.ResponseWriter, r *http.Request) {
 		}
 
 	} else {
+
 		view.Render(w, view.D{
 			"Article": _article,
 			"Errors":  errors,
@@ -79,8 +83,11 @@ func (*ArticlesController) Store(w http.ResponseWriter, r *http.Request) {
 
 }
 func (*ArticlesController) Create(w http.ResponseWriter, r *http.Request) {
-
-	view.Render(w, view.D{"Title": "", "Body": ""}, "articles.create", "articles._form_field")
+	article := article.Article{
+		Title: "",
+		Body:  "",
+	}
+	view.Render(w, view.D{"Article": article}, "articles.create", "articles._form_field")
 
 }
 func (*ArticlesController) Edit(w http.ResponseWriter, r *http.Request) {
@@ -128,6 +135,7 @@ func (*ArticlesController) Delete(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500服务器内部错误")
 		} else {
 			if rowsAffected > 0 {
+				flash.Danger("删除成功")
 				indexURL := route.Name2URL("articles.index")
 				http.Redirect(w, r, indexURL, http.StatusFound)
 			} else {
@@ -169,7 +177,7 @@ func (*ArticlesController) Update(w http.ResponseWriter, r *http.Request) {
 		if len(errors) == 0 {
 
 			// 4.2 表单验证通过，更新数据
-			fmt.Println("进入了更新页面")
+
 			rowsAffected, err := _article.Update()
 
 			if err != nil {
@@ -180,6 +188,7 @@ func (*ArticlesController) Update(w http.ResponseWriter, r *http.Request) {
 			}
 			// √ 更新成功，跳转到文章详情页
 			if rowsAffected > 0 {
+				flash.Success("更新成功！")
 				showURL := route.Name2URL("articles.show", "id", id)
 				http.Redirect(w, r, showURL, http.StatusFound)
 			} else {

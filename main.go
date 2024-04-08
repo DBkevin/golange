@@ -3,19 +3,21 @@ package main
 import (
 	"goblog/app/middlewares"
 	"goblog/bootstrap"
-	"goblog/pkg/database"
-	"goblog/pkg/logger"
-
+	"goblog/config"
+	c "goblog/pkg/config"
 	"net/http"
 )
 
+func init() {
+	config.Initialize()
+}
 func main() {
-	database.InitDB()
-	database.CreateTables()
+	// 初始化 SQL
 
 	bootstrap.SetupDB()
+	// 初始化路由绑定
 	router := bootstrap.SetupRoute()
 
-	err := http.ListenAndServe("192.168.0.197:3020", middlewares.RemoveTrailingSlash(router))
-	logger.LogError(err)
+	http.ListenAndServe(c.GetString("app.host")+":"+c.GetString("app.port"), middlewares.RemoveTrailingSlash(router))
+
 }
