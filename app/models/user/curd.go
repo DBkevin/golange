@@ -3,6 +3,7 @@ package user
 import (
 	"goblog/pkg/logger"
 	"goblog/pkg/model"
+	"goblog/pkg/route"
 )
 
 func (user *User) Create() (err error) {
@@ -13,5 +14,5 @@ func (user *User) Create() (err error) {
 	return nil
 }
 func (user User) Link() string {
-	return " "
+	return route.Name2URL("users.show", "id", user.GetStringID())
 }

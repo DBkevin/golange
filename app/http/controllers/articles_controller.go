@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"goblog/app/models/article"
+	"goblog/app/policies"
 	"goblog/app/requests"
 	"goblog/pkg/flash"
 	"goblog/pkg/logger"
@@ -32,7 +33,12 @@ func (*ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500服务器内部错误")
 		}
 	} else {
-		view.Render(w, view.D{"Article": article}, "articles.show", "articles._article_meta")
+		view.Render(w,
+			view.D{
+				"Article":          article,
+				"CanModifyArticle": policies.CanModifyArticle(article),
+			},
+			"articles.show", "articles._article_meta")
 	}
 
 }
@@ -107,10 +113,15 @@ func (*ArticlesController) Edit(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500 服务器内部错误")
 		}
 	} else {
-		view.Render(w, view.D{
-			"Article": _article,
-			"Errors":  view.D{},
-		}, "articles.edit", "articles._form_field")
+		if !policies.CanModifyArticle(_article) {
+			flash.Warning("未授权操作！")
+			http.Redirect(w, r, "/", http.StatusFound)
+		} else {
+			view.Render(w, view.D{
+				"Article": _article,
+				"Errors":  view.D{},
+			}, "articles.edit", "articles._form_field")
+		}
 	}
 
 }
@@ -128,19 +139,26 @@ func (*ArticlesController) Delete(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "5000服务器内部错误")
 		}
 	} else {
-		rowsAffected, err := article.Delete()
-		if err != nil {
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "500服务器内部错误")
+		// 检查权限
+		if !policies.CanModifyArticle(article) {
+			flash.Warning("您没有权限执行此操作！")
+			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
-			if rowsAffected > 0 {
-				flash.Danger("删除成功")
-				indexURL := route.Name2URL("articles.index")
-				http.Redirect(w, r, indexURL, http.StatusFound)
+
+			rowsAffected, err := article.Delete()
+			if err != nil {
+				logger.LogError(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, "500服务器内部错误")
 			} else {
-				w.WriteHeader(http.StatusNotFound)
-				fmt.Fprint(w, "404文章未找到")
+				if rowsAffected > 0 {
+					flash.Danger("删除成功")
+					indexURL := route.Name2URL("articles.index")
+					http.Redirect(w, r, indexURL, http.StatusFound)
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+					fmt.Fprint(w, "404文章未找到")
+				}
 			}
 		}
 	}
@@ -168,39 +186,43 @@ func (*ArticlesController) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// 4. 未出现错误
-
-		// 4.1 表单验证
-		_article.Title = r.PostFormValue("title")
-		_article.Body = r.PostFormValue("body")
-		errors := requests.ValidateArticleForm(_article)
-
-		if len(errors) == 0 {
-
-			// 4.2 表单验证通过，更新数据
-
-			rowsAffected, err := _article.Update()
-
-			if err != nil {
-				// 数据库错误
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprint(w, "500 服务器内部错误aaa")
-				return
-			}
-			// √ 更新成功，跳转到文章详情页
-			if rowsAffected > 0 {
-				flash.Success("更新成功！")
-				showURL := route.Name2URL("articles.show", "id", id)
-				http.Redirect(w, r, showURL, http.StatusFound)
-			} else {
-				fmt.Fprint(w, "您没有做任何更改！")
-			}
+		if !policies.CanModifyArticle(_article) {
+			flash.Warning("未授权操作！")
+			http.Redirect(w, r, "/", http.StatusForbidden)
 		} else {
+			// 4.1 表单验证
+			_article.Title = r.PostFormValue("title")
+			_article.Body = r.PostFormValue("body")
+			errors := requests.ValidateArticleForm(_article)
 
-			// 4.3 表单验证不通过，显示理由
-			view.Render(w, view.D{
-				"Article": _article,
-				"Errors":  errors,
-			}, "articles.edit", "articles._form_field")
+			if len(errors) == 0 {
+
+				// 4.2 表单验证通过，更新数据
+
+				rowsAffected, err := _article.Update()
+
+				if err != nil {
+					// 数据库错误
+					w.WriteHeader(http.StatusInternalServerError)
+					fmt.Fprint(w, "500 服务器内部错误aaa")
+					return
+				}
+				// √ 更新成功，跳转到文章详情页
+				if rowsAffected > 0 {
+					flash.Success("更新成功！")
+					showURL := route.Name2URL("articles.show", "id", id)
+					http.Redirect(w, r, showURL, http.StatusFound)
+				} else {
+					fmt.Fprint(w, "您没有做任何更改！")
+				}
+			} else {
+
+				// 4.3 表单验证不通过，显示理由
+				view.Render(w, view.D{
+					"Article": _article,
+					"Errors":  errors,
+				}, "articles.edit", "articles._form_field")
+			}
 		}
 	}
 }

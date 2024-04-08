@@ -11,6 +11,7 @@ import (
 func RegisterWebRoutes(r *mux.Router) {
 	pc := new(controllers.PagesController)
 	ac := new(controllers.ArticlesController)
+	uc := new(controllers.UserController)
 	auc := new(controllers.AuthController)
 	r.NotFoundHandler = http.HandlerFunc(pc.NotFound)
 	r.HandleFunc("/about", pc.About).Methods("GET").Name("about")
@@ -29,6 +30,9 @@ func RegisterWebRoutes(r *mux.Router) {
 	r.HandleFunc("/auth/login", middlewares.Guest(auc.Login)).Methods("GET").Name("auth.login")
 	r.HandleFunc("/auth/DoLogin", middlewares.Guest(auc.DoLogin)).Methods("POST").Name("auth.dologin")
 	r.HandleFunc("/auth/Logout", middlewares.Auth(auc.Logout)).Methods("POST").Name("auth.logout")
+
+	//用户相关
+	r.HandleFunc("/users/{id:[0-9]+}", uc.Show).Methods("GET").Name("users.show")
 	//静态资源
 	r.PathPrefix("/css/").Handler(http.FileServer(http.Dir("./public")))
 	r.PathPrefix("/js/").Handler(http.FileServer(http.Dir("./public")))
