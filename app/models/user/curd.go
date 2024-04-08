@@ -12,3 +12,6 @@ func (user *User) Create() (err error) {
 	}
 	return nil
 }
+func (user User) Link() string {
+	return " "
+}
