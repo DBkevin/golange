@@ -36,9 +36,9 @@ func init() {
 
 // Env 读取环境变量，支持默认值
 func Env(envName string, defaultValue ...interface{}) interface{} {
-	if len(envName) > 0 {
+	/*if len(envName) > 0 {
 		return Get(envName, defaultValue[0])
-	}
+	}*/
 	return Get(envName)
 }
 
