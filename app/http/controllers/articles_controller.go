@@ -9,6 +9,7 @@ import (
 	"goblog/pkg/flash"
 	"goblog/pkg/logger"
 	"goblog/pkg/route"
+	"goblog/pkg/types"
 	"goblog/pkg/view"
 	"net/http"
 )
@@ -51,10 +52,12 @@ func (ac *ArticlesController) Index(w http.ResponseWriter, r *http.Request) {
 func (*ArticlesController) Store(w http.ResponseWriter, r *http.Request) {
 	// 1. 初始化数据
 	currentUser := auth.User()
+	categoryID := r.PostFormValue("categoryid")
 	_article := article.Article{
-		Title:  r.PostFormValue("title"),
-		Body:   r.PostFormValue("body"),
-		UserID: currentUser.ID,
+		Title:      r.PostFormValue("title"),
+		Body:       r.PostFormValue("body"),
+		UserID:     currentUser.ID,
+		CategoryID: types.StringToUint64(categoryID),
 	}
 	//表单验证
 	errors := requests.ValidateArticleForm(_article)
@@ -86,6 +89,7 @@ func (*ArticlesController) Create(w http.ResponseWriter, r *http.Request) {
 		Title: "",
 		Body:  "",
 	}
+
 	view.Render(w, view.D{"Article": article}, "articles.create", "articles._form_field")
 
 }
@@ -93,6 +97,7 @@ func (ac *ArticlesController) Edit(w http.ResponseWriter, r *http.Request) {
 
 	id := route.GetRouteVariable("id", r)
 	_article, err := article.Get(id)
+
 	// 3. 如果出现错误
 	if err != nil {
 		ac.ResponseForSQLError(w, err)

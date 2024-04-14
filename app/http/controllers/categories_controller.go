@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"goblog/app/models/article"
 	"goblog/app/models/category"
 	"goblog/app/requests"
 	"goblog/pkg/flash"
@@ -55,6 +56,13 @@ func (*CategoriesController) Store(w http.ResponseWriter, r *http.Request) {
 }
 
 // Show 显示分类
-func (*CategoriesController) Show(w http.ResponseWriter, r *http.Request) {
-	//todo
+
+func (cc *CategoriesController) Show(w http.ResponseWriter, r *http.Request) {
+	cid := route.GetRouteVariable("id", r)
+	articles, err := article.GetByCategoryID(cid)
+	if err != nil {
+		cc.ResponseForSQLError(w, err)
+	} else {
+		view.Render(w, view.D{"Articles": articles}, "articles.index", "articles._article_meta")
+	}
 }

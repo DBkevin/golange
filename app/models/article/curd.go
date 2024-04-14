@@ -11,20 +11,23 @@ import (
 
 func Get(idstr string) (Article, error) {
 
-	// var article Article
-	// id := types.StringToUint64(idstr)
-
-	// if err := model.DB.Debug().Preload("User").Find(&article, id).Error; err != nil {
-	// 	return article, err
-	// }
-	// return article, nil
 	var article Article
 	id := types.StringToUint64(idstr)
-	if err := model.DB.Preload("User").First(&article, id).Error; err != nil {
+	if err := model.DB.Preload("User").Preload("Category").Find(&article, id).Error; err != nil {
 		return article, err
 	}
 
 	return article, nil
+}
+
+// GetByCategoryID
+func GetByCategoryID(cid string) ([]Article, error) {
+
+	var articles []Article
+	if err := model.DB.Where("category_id =?", cid).Preload("Category").Find(&articles).Error; err != nil {
+		return articles, err
+	}
+	return articles, nil
 }
 
 // GetByUserID 获取用户全部文章
@@ -37,7 +40,8 @@ func GetByUserID(uid string) ([]Article, error) {
 }
 
 // GetAll 获取全部文章
-func GetAll(r *http.Request, perPage int) ([]Article, pagination.ViewData, error) {
+func GetAll(r *http.Request, perPage int, idr ...[]string) ([]Article, pagination.ViewData, error) {
+
 	// 1. 初始化分页实例
 	db := model.DB.Model(Article{}).Order("created_at desc")
 	_pager := pagination.New(r, db, route.Name2URL("home"), perPage)

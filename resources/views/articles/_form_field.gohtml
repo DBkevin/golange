@@ -1,5 +1,25 @@
 
 {{define "form-fields"}}
+<div class="form-group mt-3">
+ 
+   
+      {{ if .Article.Category }}
+        <label for="category">不可编辑类目</label>
+       <select class="form-select" name="categoryid" aria-label="Disabled select example" disabled >
+         <option value="{{ .Article.Category.ID }}" selected disabled >{{ .Article.Category.Name }}</option>
+       </select>
+      {{else}}
+       <label for="category">请选择类别</label>
+      <select class="form-control" name="categoryid" required>
+      <option>请选择分类</option>
+       {{ range $key, $category := .Categories }}
+          <option value="{{ $category.ID }}">{{ $category.Name }}</option>
+      {{end}}
+         </select>
+      {{end}}
+   
+
+  </div>
   <div class="form-group mt-3">
     <label for="title">标题</label>
     <input type="text" class="form-control {{if .Errors.title }}is-invalid {{end}}" name="title" value="{{ .Article.Title }}" required>

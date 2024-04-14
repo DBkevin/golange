@@ -12,7 +12,7 @@ type User struct {
 	Name            string `gorm:"type:varchar(255);not null;unique" valid:"name"`
 	Email           string `gorm:"type:varchar(255);default:null;unique" valid:"email"`
 	Password        string `gorm:"type:varchar(255);not null;" valid:"password"`
-	PasswordConfirm string `goro:"-" valid:"password_confirm"`
+	PasswordConfirm string `gorm:"-;" valid:"password_confirm"`
 }
 
 // Get 通过 ID 获取用户
